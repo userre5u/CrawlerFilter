@@ -13,17 +13,11 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
-//	type EventInfo struct {
-//		IP      string            `json:"sourceIp"`
-//		Method  string            `json:"httpMethod"`
-//		Path    string            `json:"path"`
-//		Headers map[string]string `json:"headers"`
-//		Body    string            `json:"body"`
-//		UA      string            `json:"User-Agent"`
-//	}
 type ReqInfo struct {
+	DateTime      string
+	Session       string
 	IP            string
-	Bot           bool
+	Crawler       bool
 	IpType        string
 	UA            string
 	Country       string
@@ -80,6 +74,14 @@ func checkCountry(url string) (string, error) {
 
 }
 
+func (r *ReqInfo) SetSession(e events.LambdaFunctionURLRequest) {
+	(*r).Session = e.RequestContext.RequestID
+}
+
+func (r *ReqInfo) SetDateTime(e events.LambdaFunctionURLRequest) {
+	(*r).DateTime = e.RequestContext.Time
+}
+
 func (r *ReqInfo) GetIP(e events.LambdaFunctionURLRequest) string {
 	// get ip from request and send the ip to checker function
 	sourceIP := e.RequestContext.HTTP.SourceIP
@@ -94,13 +96,13 @@ func (r *ReqInfo) Getcountry(e events.LambdaFunctionURLRequest) (string, error) 
 	blacklistCounties := [3]string{"US", "RU", "CN"}
 	ipApi := utils.Api + e.RequestContext.HTTP.SourceIP
 	country, err := checkCountry(ipApi)
-	(*r).Country, (*r).Bot = country, false
+	(*r).Country, (*r).Crawler = country, false
 	if err != nil {
 		return "", err
 	}
 	for _, ctr := range blacklistCounties {
 		if ctr == country {
-			(*r).Bot = true
+			(*r).Crawler = true
 			break
 		}
 	}
@@ -114,7 +116,7 @@ func (r *ReqInfo) Getmethod(e events.LambdaFunctionURLRequest) (string, bool) {
 	method := e.RequestContext.HTTP.Method
 	(*r).Method = method
 	if method == utils.POST || method == utils.TRACE || method == utils.OPTIONS {
-		(*r).Bot = true
+		(*r).Crawler = true
 		msg = fmt.Sprintf(utils.Method_not_allowed, method)
 		val = false
 	}
@@ -126,7 +128,7 @@ func (r *ReqInfo) GetPath(e events.LambdaFunctionURLRequest) (string, bool) {
 	path := e.RequestContext.HTTP.Path
 	(*r).Path = path
 	if path != "/" {
-		(*r).Bot = true
+		(*r).Crawler = true
 		return fmt.Sprintf(utils.Enumeration, path), false
 	}
 	return fmt.Sprintf(utils.ValidPath, path), true
@@ -138,7 +140,7 @@ func (r *ReqInfo) GetAgent(e events.LambdaFunctionURLRequest) (string, bool) {
 	userAgent := e.RequestContext.HTTP.UserAgent
 	matchAndroid, matchIos := regexp.MustCompile(utils.AndroidRegex), regexp.MustCompile(utils.IosRegex)
 	if !(matchAndroid.MatchString(userAgent) || matchIos.MatchString(userAgent)) {
-		(*r).Bot = true
+		(*r).Crawler = true
 		msg = fmt.Sprintf(utils.AgentNotallowed, userAgent)
 		val = false
 	}
@@ -152,7 +154,7 @@ func (r *ReqInfo) GetSessionKey(e events.LambdaFunctionURLRequest) (string, bool
 	key := e.Headers["SessionKey"]
 	(*r).SessionKey = key
 	if key != utils.SecretKey {
-		(*r).Bot = true
+		(*r).Crawler = true
 		return fmt.Sprintf(utils.SessionNotok, key), false
 	}
 	return fmt.Sprintf(utils.SessionOk, key), true
