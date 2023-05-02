@@ -1,0 +1,10 @@
+# ignore all logs
+*.log
+
+# ignore local generated events 
+Lambda/sam-app/events
+
+# ignore aws sam build cache
+Lambda/sam-app/.aws-sam/
+
+*.vscode*
