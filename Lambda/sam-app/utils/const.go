@@ -1,11 +1,11 @@
 package utils
 
+// custom messages for logging
 const (
 	BlacklistStr       = "Blacklist"
 	WhitelistStr       = "Whitelist"
-	Unknown            = "UNKNOWN"
-	Fail               = "fail"
-	SecretKey          = "ThisIsSecret"
+	Unknown            = "[!] UNKNOWN"
+	Fail               = "[-] fail"
 	Api                = "http://ip-api.com/json/"
 	Method_ok          = "[+] Method is ok"
 	Method_not_allowed = "[!] Method is not allowed: %s"
@@ -17,9 +17,30 @@ const (
 	SessionOk          = "[+] Valid session key: %s"
 	CriticalWord       = "[!] Critical word found: %s"
 	CriticalNotword    = "[+] No critical words found on request"
-	OPTIONS            = "OPTIONS"
-	TRACE              = "TRACE"
-	POST               = "POST"
-	AndroidRegex       = `Mozilla\/5\.0 \(Linux; [a|A]ndroid \d{1,2}; SM-.{1,5}\) AppleWebKit\/\d{3}\.\d{2} \(KHTML, like Gecko\) Chrome\/[7|8|9]\d\.\d{1,5}\.\d{1,5}\.\d{1,5} Mobile Safari\/\d{3}\.\d{2}`
-	IosRegex           = `Mozilla\/5.0 \(iPhone(\d{1,2},\d)?; (U;)?\s?CPU iPhone OS \d{2}(_\d){1,2} like Mac OS X\) AppleWebKit\/\d{3}\.\d{1,2}\.\d{1,2} \(KHTML, like Gecko\) Version\/\d{2}\.\d(\.\d)? Mobile\/[A-Za-z0-9]{6} Safari\/\d{3}\.\d{1,2}`
+)
+
+// methods
+const (
+	OPTIONS = "OPTIONS"
+	TRACE   = "TRACE"
+	POST    = "POST"
+)
+
+// S3 INFO
+const (
+	Bucketname = "bucketbuckettt"
+	MaxDataLen = 1024
+)
+
+// User-Agent devices
+const (
+	AndroidRegex = `Mozilla\/5\.0 \(Linux; [a|A]ndroid \d{1,2}; SM-.{1,5}\) AppleWebKit\/\d{3}\.\d{2} \(KHTML, like Gecko\) Chrome\/[7|8|9]\d\.\d{1,5}\.\d{1,5}\.\d{1,5} Mobile Safari\/\d{3}\.\d{2}`
+	IosRegex     = `Mozilla\/5.0 \(iPhone(\d{1,2},\d)?; (U;)?\s?CPU iPhone OS \d{2}(_\d){1,2} like Mac OS X\) AppleWebKit\/\d{3}\.\d{1,2}\.\d{1,2} \(KHTML, like Gecko\) Version\/\d{2}\.\d(\.\d)? Mobile\/[A-Za-z0-9]{6} Safari\/\d{3}\.\d{1,2}`
+)
+
+// Block list countries
+const (
+	US = "US"
+	RU = "RU"
+	CN = "CN"
 )

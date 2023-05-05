@@ -2,6 +2,7 @@ package bucket
 
 import (
 	"fmt"
+	"servFunction/utils"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -20,8 +21,8 @@ const (
 )
 
 func CreateSession() (*s3.S3, error) {
-	creds := credentials.NewStaticCredentials("XXXXX", "YYYYY", "")
-	session, err := session.NewSession(&aws.Config{Region: aws.String("eu-west-1"), Credentials: creds})
+	creds := credentials.NewStaticCredentials(utils.DataConfig.Aws_access_key_id, utils.DataConfig.Aws_secret_access_key, utils.DataConfig.Token)
+	session, err := session.NewSession(&aws.Config{Region: aws.String(utils.DataConfig.Region), Credentials: creds})
 	if err != nil {
 		return nil, err
 	}
