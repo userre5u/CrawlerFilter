@@ -8,7 +8,8 @@ Description: >
 Globals:
   Function:
     Timeout: 5
-    MemorySize: 128
+    MemorySize: 512
+
 
 Resources:
   main:
@@ -27,4 +28,8 @@ Resources:
             Method: GET
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
-          PARAM1: VALUE
+          Aws_access_key_id: "XXXXXXXXXXXXX"
+          Aws_secret_access_key: "YYYYYYYYYYY"
+          Region: "eu-west-1"
+          Token: ""
+          SecretKey: "AAAAAAAAAAAAA"

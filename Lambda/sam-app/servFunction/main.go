@@ -18,11 +18,11 @@ import (
 var data []byte
 var object uuid.UUID
 
-func displayContent(Crawler bool) string {
+func displayContent(Crawler bool) (string, int) {
 	if Crawler {
-		return "Something went wrong during your request :("
+		return "Forbidden", 403
 	} else {
-		return "WOW"
+		return "Good", 200
 	}
 }
 
@@ -36,7 +36,7 @@ func displayCriticalWords(pCriticalW *[]byte, r *internal.ReqInfo) (err error) {
 }
 
 func runChecker(logger *logrus.Logger, reqinfo *internal.ReqInfo, e events.LambdaFunctionURLRequest) string {
-	pCriticalW := make([]byte, 80)
+	pCriticalW := make([]byte, 120)
 	logger.Info("http request sanity [STARTED]")
 	// Check #1
 	utils.DisplayMsg(logger, reqinfo.GetIP(e))
@@ -75,15 +75,11 @@ func runChecker(logger *logrus.Logger, reqinfo *internal.ReqInfo, e events.Lambd
 }
 
 func checkNewFile(input string) bool {
-	fmt.Printf("Data len: %d + Input len: %d = %d (object=%#v)\n", len(data), len(input), len(input)+len(data), object)
-	if len(input)+len(data) > bucket.MaxDataLen {
-		fmt.Println("Creating new file...")
+	if len(input)+len(data) > utils.MaxDataLen {
 		data = data[:0]
 		object = bucket.CreateNewObject()
-		fmt.Printf("New file: %#v\n", object)
 		return true
 	}
-	fmt.Printf("Not creating new file - using: %#v\n", object)
 	return false
 }
 
@@ -98,7 +94,7 @@ func saveData(input string, s3object *s3.S3) {
 
 }
 
-func Handler(ctx context.Context, e events.LambdaFunctionURLRequest) (string, error) {
+func Handler(ctx context.Context, e events.LambdaFunctionURLRequest) (events.LambdaFunctionURLResponse, error) {
 	logger, ok := utils.HasLogger(ctx)
 	if !ok {
 		panic("Could not extract logger")
@@ -122,9 +118,22 @@ func Handler(ctx context.Context, e events.LambdaFunctionURLRequest) (string, er
 	}
 
 	saveData(store, s3object)
+	msg, status_code := displayContent(reqInfo.Crawler)
+	return events.LambdaFunctionURLResponse{StatusCode: status_code, Body: msg}, nil
+}
 
-	return displayContent(reqInfo.Crawler), nil
-	//return events.LambdaFunctionURLResponse{StatusCode: 200, Body: displayContent(reqInfo.Bot)}, nil
+func initS3() *s3.S3 {
+	s3, err := bucket.CreateSession()
+	if err != nil {
+		panic(err)
+	}
+	if !bucket.BucketExists(s3) {
+		if err := bucket.CreateS3(s3); err != nil {
+			panic(err)
+		}
+	}
+	object = bucket.CreateNewObject()
+	return s3
 }
 
 func initContext(logger *logrus.Logger, s3 *s3.S3) context.Context {
@@ -140,21 +149,13 @@ func initContext(logger *logrus.Logger, s3 *s3.S3) context.Context {
 }
 
 func main() {
-	data = make([]byte, 0, 2048)
-	logger := utils.InitLogger()
-	s3, err := bucket.CreateSession()
+	err := utils.LoadEnv()
 	if err != nil {
 		panic(err)
 	}
-	if !bucket.BucketExists(s3) {
-		if err := bucket.CreateS3(s3); err != nil {
-			panic(err)
-		}
-	}
-	object = bucket.CreateNewObject()
-
-	subcontext := initContext(logger, s3)
-	lambda.Start(func(ctx context.Context, e events.LambdaFunctionURLRequest) (string, error) {
+	data = make([]byte, 0, 2048)
+	subcontext := initContext(utils.InitLogger(), initS3())
+	lambda.Start(func(ctx context.Context, e events.LambdaFunctionURLRequest) (events.LambdaFunctionURLResponse, error) {
 		return Handler(subcontext, e)
 	})
 

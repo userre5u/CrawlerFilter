@@ -34,7 +34,7 @@ type ipAPI struct {
 }
 
 func checkip(sourceIP string) string {
-	// check if ip is blacklisted/whitelisted
+	// check if ip is blacklisted/whitelisted (NEED TO USE DB instead of hardcoded IP's)
 	blacklist := [5]string{
 		"1.1.1.1",
 		"8.8.8.8",
@@ -67,7 +67,7 @@ func checkCountry(url string) (string, error) {
 	if err != nil {
 		return utils.Unknown, err
 	}
-	if sapi.Status == "fail" {
+	if sapi.Status == utils.Fail {
 		return utils.Unknown, errors.New(sapi.Message)
 	}
 	return sapi.CountryCode, nil
@@ -75,10 +75,12 @@ func checkCountry(url string) (string, error) {
 }
 
 func (r *ReqInfo) SetSession(e events.LambdaFunctionURLRequest) {
+	// set session to request
 	(*r).Session = e.RequestContext.RequestID
 }
 
 func (r *ReqInfo) SetDateTime(e events.LambdaFunctionURLRequest) {
+	// set dateTime to request
 	(*r).DateTime = e.RequestContext.Time
 }
 
@@ -93,7 +95,7 @@ func (r *ReqInfo) GetIP(e events.LambdaFunctionURLRequest) string {
 
 func (r *ReqInfo) Getcountry(e events.LambdaFunctionURLRequest) (string, error) {
 	// Get country iso code and compare against blacklist countries
-	blacklistCounties := [3]string{"US", "RU", "CN"}
+	blacklistCounties := [3]string{utils.US, utils.RU, utils.CN}
 	ipApi := utils.Api + e.RequestContext.HTTP.SourceIP
 	country, err := checkCountry(ipApi)
 	(*r).Country, (*r).Crawler = country, false
@@ -153,7 +155,7 @@ func (r *ReqInfo) GetSessionKey(e events.LambdaFunctionURLRequest) (string, bool
 	// check if incoming request has valid/invalid/missing session key
 	key := e.Headers["SessionKey"]
 	(*r).SessionKey = key
-	if key != utils.SecretKey {
+	if key != utils.DataConfig.SecretKey {
 		(*r).Crawler = true
 		return fmt.Sprintf(utils.SessionNotok, key), false
 	}
