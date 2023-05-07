@@ -12,10 +12,10 @@ func main() {
 		panic(err)
 	}
 	logger := utils.GetLogger()
-	s3, err := s3Service.CreateSession(&config)
+	sess, err := s3Service.CreateSession(&config)
 	if err != nil {
 		panic(err)
 	}
-	internal.Start(logger, s3, config.SessionKey)
+	internal.Start(logger, sess, config.SessionKey)
 
 }

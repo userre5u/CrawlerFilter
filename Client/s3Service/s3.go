@@ -13,14 +13,14 @@ const (
 	bucketname = "bucketbuckettt"
 )
 
-func CreateSession(config *utils.Config) (*s3.S3, error) {
+func CreateSession(config *utils.Config) (*session.Session, error) {
 	creds := credentials.NewStaticCredentials(config.Aws_access_key_id, config.Aws_secret_access_key, "")
 	session, err := session.NewSession(&aws.Config{Region: aws.String(config.Region), Credentials: creds})
 	if err != nil {
 		return nil, err
 	}
-	s3 := s3.New(session)
-	return s3, nil
+	//s3 := s3.New(session)
+	return session, nil
 }
 
 func ListObjects(s3object *s3.S3) (*s3.ListObjectsOutput, error) {
