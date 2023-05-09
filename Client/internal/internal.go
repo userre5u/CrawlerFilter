@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"crawlerDetection/Client/s3Service"
 	"fmt"
 	"os"
@@ -19,6 +20,13 @@ type object_metadata struct {
 	lastmodified time.Time
 	tag          string
 	size         int64
+}
+
+type Global_objects struct {
+	Object_s3         *s3.S3
+	Object_sess       *session.Session
+	Object_downloader *s3manager.Downloader
+	Logger            *logrus.Logger
 }
 
 type collectionData []object_metadata
@@ -46,8 +54,8 @@ func filterOutput(output *s3.ListObjectsOutput) collectionData {
 
 }
 
-func runList(s3 *s3.S3) (collectionData, error) {
-	output, err := s3Service.ListObjects(s3)
+func (p Global_objects) runList() (collectionData, error) {
+	output, err := s3Service.ListObjects(p.Object_s3)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +63,7 @@ func runList(s3 *s3.S3) (collectionData, error) {
 	return metaData_List, nil
 }
 
-func downloadObjects(downloader *s3manager.Downloader, objectsMetadata collectionData) {
+func (p Global_objects) downloadObjects(objectsMetadata collectionData) {
 	for _, object := range objectsMetadata {
 		fd, err := os.Create("objects_Tests/" + object.name)
 		if err != nil {
@@ -63,7 +71,7 @@ func downloadObjects(downloader *s3manager.Downloader, objectsMetadata collectio
 			continue
 		}
 		defer fd.Close()
-		n_bytes, err := downloader.Download(fd, &s3.GetObjectInput{
+		n_bytes, err := p.Object_downloader.Download(fd, &s3.GetObjectInput{
 			Bucket: aws.String("bucketbuckettt"),
 			Key:    aws.String(object.name),
 		})
@@ -73,25 +81,23 @@ func downloadObjects(downloader *s3manager.Downloader, objectsMetadata collectio
 		}
 		fmt.Printf("File name: %q downloaded, %d bytes\n", object.name, n_bytes)
 	}
-
 }
 
-func getS3(sess *session.Session) *s3.S3 {
+func GetS3(sess *session.Session) *s3.S3 {
 	return s3.New(sess)
 }
 
-func getDownloader(sess *session.Session) *s3manager.Downloader {
+func GetDownloader(sess *session.Session) *s3manager.Downloader {
 	return s3manager.NewDownloader(sess)
 }
 
-func Start(logger *logrus.Logger, sess *session.Session, sessionKey string) {
-	s3Object := getS3(sess)
-	collectionData, err := runList(s3Object)
+func Start(ctx context.Context, sessionKey string) {
+	primeType := ctx.Value(Global_objects{}).(Global_objects)
+	collectionData, err := primeType.runList()
 	if err != nil {
-		logger.Error(err)
-		return
+		primeType.Logger.Error(err)
 	}
-	downloadObjects(getDownloader(sess), collectionData)
+	primeType.downloadObjects(collectionData)
 	// for range time.Tick(time.Second * 1) {
 
 	// }

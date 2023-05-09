@@ -19,7 +19,7 @@ func CreateSession(config *utils.Config) (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	//s3 := s3.New(session)
+
 	return session, nil
 }
 
