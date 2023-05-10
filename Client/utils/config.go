@@ -19,7 +19,7 @@ type Secret struct {
 
 func LoadConfig() (Config, error) {
 	config := Secret{}
-	fd, err := os.Open("config/config.json")
+	fd, err := os.Open("Client/config/config.json")
 	if err != nil {
 		return config.Config, err
 	}
