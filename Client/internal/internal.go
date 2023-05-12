@@ -60,7 +60,6 @@ func filterOutput(output *s3.ListObjectsOutput) collectionData {
 	retBool := false
 	collectMetaData := make(collectionData, 0, len(objects))
 	if len(objects) == 0 {
-
 		return collectMetaData
 	}
 	if len(objects) == 1 {
@@ -75,7 +74,6 @@ func filterOutput(output *s3.ListObjectsOutput) collectionData {
 	}
 
 	return collectMetaData
-
 }
 
 func (p Global_objects) prepareMetadataInsert(data collectionData) {
@@ -83,26 +81,25 @@ func (p Global_objects) prepareMetadataInsert(data collectionData) {
 	for _, object := range data {
 		fd, err := os.OpenFile("Client/objects_Tests/"+object.name, os.O_RDONLY, 0444)
 		if err != nil {
-			p.Logger.Errorf("Could not open filename %q for reading: %s\n", object.name, err)
+			p.Logger.Errorf("Could not open filename %q for reading: %s", object.name, err)
+			continue
 		}
 		defer fd.Close()
 		hash := sha256.New()
 		if _, err := io.Copy(hash, fd); err != nil {
-			p.Logger.Errorf("Could not calculate hash of file %q: %s\n", object.name, err)
-
+			p.Logger.Errorf("Could not calculate hash of file %q: %s", object.name, err)
+			continue
 		}
 		sum := hex.EncodeToString(hash.Sum(nil))
-
 		err = p.InsertMetadataToDb(object.name, sum, timeNow.String(), object.lastmodified.String(), object.tag, object.size)
 		if err != nil {
-			p.Logger.Errorf("Could not insert data to DB: %s\n", err)
+			p.Logger.Errorf("Could not insert data to DB: %s", err)
 			continue
 		}
 		value := object.internal_metadata
 		*value.deleteFile = true
-
+		p.Logger.Infof("[+] Successfully prepared object metadata: %q to be inserted to DB, setting delete attribute to 'true'", object.name)
 	}
-
 }
 
 func (p Global_objects) runList() (collectionData, error) {
@@ -130,7 +127,7 @@ func (p Global_objects) downloadObjects(objectsMetadata collectionData) {
 			p.Logger.Errorf("[-] Could not download file: %q, %w", object.name, err)
 			continue
 		}
-		p.Logger.Infof("File name: %q downloaded, %d bytes\n", object.name, n_bytes)
+		p.Logger.Infof("[+] File name: %q downloaded - %d bytes", object.name, n_bytes)
 	}
 }
 
@@ -140,10 +137,9 @@ func parseLine(content string) (FileContent, error) {
 		return fc, err
 	}
 	return fc, nil
-
 }
 
-func (p Global_objects) prepareContenttaInsert(objectMetadata collectionData) {
+func (p Global_objects) prepareContentInsert(objectMetadata collectionData) {
 	for _, object := range objectMetadata {
 		fd, err := os.OpenFile("Client/objects_Tests/"+object.name, os.O_RDONLY, 0444)
 		if err != nil {
@@ -156,51 +152,60 @@ func (p Global_objects) prepareContenttaInsert(objectMetadata collectionData) {
 		for scanner.Scan() {
 			fc, err := parseLine(scanner.Text())
 			if err != nil {
-				p.Logger.Errorf("Error during data parsing: %s\n", err)
+				p.Logger.Errorf("Error during data parsing: %s", err)
 				continue
 			}
 			p.InsertContentToDb(fc)
 		}
+		p.Logger.Infof("[+] Successfully inserted object's content: %q to DB", object.name)
 	}
 }
 
-func deleteRemoteFile(metadata collectionData) {
-	// delete remote files from aws s3
-
+func (p Global_objects) deleteRemoteFile(metadata collectionData) {
+	for _, object := range metadata {
+		if *object.internal_metadata.deleteFile {
+			err := s3Service.DeleteObject(p.Object_s3, object.name)
+			if err != nil {
+				p.Logger.Errorf("[-] Unable to delete object: %q - reason: %s", object.name, err)
+				continue
+			}
+			p.Logger.Infof("[+] Successfully deleted remote object: %q", object.name)
+		}
+	}
 }
 
 func (p Global_objects) deleteLocalFile(metadata collectionData) {
-	// delete local files
 	for _, object := range metadata {
 		if *object.internal_metadata.deleteFile {
 			if err := os.Remove("Client/objects_Tests/" + object.name); err != nil {
-				p.Logger.Errorf("Could not delete file name: %q, %s", object.name, err)
+				p.Logger.Errorf("[-] unable to delete local object: %q - reason: %s", object.name, err)
 				continue
 			}
-			p.Logger.Infof("Deleted file: %q\n", object.name)
+			p.Logger.Infof("[+] Successfully deleted local object: %q", object.name)
 		}
 	}
 }
 
 func Start(ctx context.Context, sessionKey string) {
 	globalObject := ctx.Value(Global_objects{}).(Global_objects)
-	// data := make(collectionData, 0, 80)
-	// timer := time.Now()
-	// data = append(data, object_metadata{name: "463084ee-ff2d-4b9c-b0e5-5c0558a86408", size: 5, lastmodified: timer, tag: "abc"})
-	// globalObject.ParseFileContentInsert(data)
-	collectionData, err := globalObject.runList()
-	if err != nil {
-		globalObject.Logger.Error(err)
+	for range time.Tick(time.Second * 20) {
+		globalObject.Logger.Info("[!] Starting new Extraction...")
+		collectionData, err := globalObject.runList()
+		time.Sleep(time.Second * 2)
+		if err != nil {
+			globalObject.Logger.Error(err)
+			continue
+		}
+		if len(collectionData) > 0 {
+			globalObject.downloadObjects(collectionData)
+			globalObject.prepareMetadataInsert(collectionData)
+			globalObject.prepareContentInsert(collectionData)
+			globalObject.deleteRemoteFile(collectionData)
+			globalObject.deleteLocalFile(collectionData)
+			globalObject.Logger.Info("[+] Finished extraction, sleeping for 60 seconds...")
+			continue
+		}
+		globalObject.Logger.Info("[-] No files found on S3...")
 	}
-	if len(collectionData) > 0 {
-		globalObject.downloadObjects(collectionData)
-		globalObject.prepareMetadataInsert(collectionData)
-		globalObject.prepareContenttaInsert(collectionData)
-		//globalObject.deleteRemoteFile(collectionData)
-		globalObject.deleteLocalFile(collectionData)
-		// add 'continue' statement here cause we will use Tick Loop
-	}
-	//globalObject.Logger.Info("No files found on S3...")
-	// for range time.Tick(time.Second * 1) {
-	// }
+
 }

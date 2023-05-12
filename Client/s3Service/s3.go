@@ -33,6 +33,15 @@ func ListObjects(s3object *s3.S3) (*s3.ListObjectsOutput, error) {
 	return output, nil
 }
 
+func DeleteObject(s3object *s3.S3, object string) error {
+	input := s3.DeleteObjectInput{Bucket: aws.String(bucketname), Key: &object}
+	_, err := s3object.DeleteObject(&input)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func GetS3(sess *session.Session) *s3.S3 {
 	return s3.New(sess)
 }
