@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 const (
@@ -30,4 +31,12 @@ func ListObjects(s3object *s3.S3) (*s3.ListObjectsOutput, error) {
 		return nil, err
 	}
 	return output, nil
+}
+
+func GetS3(sess *session.Session) *s3.S3 {
+	return s3.New(sess)
+}
+
+func GetDownloader(sess *session.Session) *s3manager.Downloader {
+	return s3manager.NewDownloader(sess)
 }

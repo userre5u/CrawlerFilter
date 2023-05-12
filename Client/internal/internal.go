@@ -21,7 +21,7 @@ import (
 )
 
 type FileContent struct {
-	Date          string
+	DateTime      string
 	Session       string
 	IP            string
 	Crawler       bool
@@ -143,7 +143,7 @@ func parseLine(content string) (FileContent, error) {
 
 }
 
-func (p Global_objects) ParseFileContentInsert(objectMetadata collectionData) {
+func (p Global_objects) prepareContenttaInsert(objectMetadata collectionData) {
 	for _, object := range objectMetadata {
 		fd, err := os.OpenFile("Client/objects_Tests/"+object.name, os.O_RDONLY, 0444)
 		if err != nil {
@@ -155,18 +155,13 @@ func (p Global_objects) ParseFileContentInsert(objectMetadata collectionData) {
 		scanner.Split(bufio.ScanLines)
 		for scanner.Scan() {
 			fc, err := parseLine(scanner.Text())
-			p.Logger.Debugf("data from parser: %#v\n", fc)
 			if err != nil {
 				p.Logger.Errorf("Error during data parsing: %s\n", err)
 				continue
 			}
 			p.InsertContentToDb(fc)
-			break // remove this afterwards
-
 		}
-
 	}
-
 }
 
 func deleteRemoteFile(metadata collectionData) {
@@ -187,16 +182,12 @@ func (p Global_objects) deleteLocalFile(metadata collectionData) {
 	}
 }
 
-func GetS3(sess *session.Session) *s3.S3 {
-	return s3.New(sess)
-}
-
-func GetDownloader(sess *session.Session) *s3manager.Downloader {
-	return s3manager.NewDownloader(sess)
-}
-
 func Start(ctx context.Context, sessionKey string) {
 	globalObject := ctx.Value(Global_objects{}).(Global_objects)
+	// data := make(collectionData, 0, 80)
+	// timer := time.Now()
+	// data = append(data, object_metadata{name: "463084ee-ff2d-4b9c-b0e5-5c0558a86408", size: 5, lastmodified: timer, tag: "abc"})
+	// globalObject.ParseFileContentInsert(data)
 	collectionData, err := globalObject.runList()
 	if err != nil {
 		globalObject.Logger.Error(err)
@@ -204,10 +195,12 @@ func Start(ctx context.Context, sessionKey string) {
 	if len(collectionData) > 0 {
 		globalObject.downloadObjects(collectionData)
 		globalObject.prepareMetadataInsert(collectionData)
-		globalObject.ParseFileContentInsert(collectionData)
+		globalObject.prepareContenttaInsert(collectionData)
 		//globalObject.deleteRemoteFile(collectionData)
 		globalObject.deleteLocalFile(collectionData)
+		// add 'continue' statement here cause we will use Tick Loop
 	}
+	//globalObject.Logger.Info("No files found on S3...")
 	// for range time.Tick(time.Second * 1) {
 	// }
 }

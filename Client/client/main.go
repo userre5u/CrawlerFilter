@@ -42,7 +42,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	context := initContext(logger, sess, internal.GetS3(sess), internal.GetDownloader(sess), dbConn)
+	context := initContext(logger, sess, s3Service.GetS3(sess), s3Service.GetDownloader(sess), dbConn)
 	internal.Start(context, config.SessionKey)
 	dbConn.Close()
 }

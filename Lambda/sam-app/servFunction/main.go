@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -67,30 +68,42 @@ func runChecker(logger *logrus.Logger, reqinfo *internal.ReqInfo, e events.Lambd
 	reqinfo.SetDateTime(e)
 
 	return fmt.Sprintf(
-		"Date: %s, Session: %s, IP: %s, IpType: %s, user-agent: %s, Method: %s, Country: %s, SessionKey: %s, Path: %s, CriticalWords: %s, Crawler: %t\n",
+		`{"DateTime": %q, "Session": %q, "IP": %q, "IpType": %q, "UA": %q, "Method": %q, "Country": %q, "SessionKey": %q, "Path": %q, "CriticalWords": %s, "Crawler": %t}`,
 		reqinfo.DateTime, reqinfo.Session, reqinfo.IP, reqinfo.IpType, reqinfo.UA, reqinfo.Method, reqinfo.Country,
 		reqinfo.SessionKey, reqinfo.Path, string(pCriticalW), reqinfo.Crawler,
 	)
 
 }
 
-func checkNewFile(input string) bool {
+func checkNewFile(input string) {
 	if len(input)+len(data) > utils.MaxDataLen {
 		data = data[:0]
 		object = bucket.CreateNewObject()
-		return true
 	}
-	return false
 }
 
-func saveData(input string, s3object *s3.S3) {
-	bNewFile := checkNewFile(input)
-	data = append(data, input...)
-	if bNewFile {
-		bucket.PutS3(s3object, data, object.String())
-		return
+func parseReqInfo(input string) ([]byte, error) {
+	var formatMsg internal.ReqInfo
+	err := json.Unmarshal([]byte(input), &formatMsg)
+	if err != nil {
+		return nil, err
 	}
+	reqBodyBytes := new(bytes.Buffer)
+	json.NewEncoder(reqBodyBytes).Encode(formatMsg)
+
+	return reqBodyBytes.Bytes(), nil
+
+}
+
+func saveData(input string, s3object *s3.S3) error {
+	checkNewFile(input)
+	formatMsg, err := parseReqInfo(input)
+	if err != nil {
+		return err
+	}
+	data = append(data, formatMsg...)
 	bucket.PutS3(s3object, data, object.String())
+	return nil
 
 }
 
@@ -117,7 +130,11 @@ func Handler(ctx context.Context, e events.LambdaFunctionURLRequest) (events.Lam
 		panic("Could not extract s3 object")
 	}
 
-	saveData(store, s3object)
+	err := saveData(store, s3object)
+	if err != nil {
+		logger.Error(err)
+		reqInfo.Crawler = true
+	}
 	msg, status_code := displayContent(reqInfo.Crawler)
 	return events.LambdaFunctionURLResponse{StatusCode: status_code, Body: msg}, nil
 }
