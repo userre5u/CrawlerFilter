@@ -60,10 +60,10 @@ func convetMapToStr(m map[string]bool) ([]byte, error) {
 func (p Global_objects) InsertContentToDb(fc FileContent) error {
 	criticalWordsStr, err := convetMapToStr(fc.CriticalWords)
 	if err != nil {
-		p.Logger.Errorf("Could not convert %v map to string", fc.CriticalWords)
+		p.Logger.Errorf("Could not convert map: %v to string", fc.CriticalWords)
 	}
-	_, err = p.DBobject.Exec("INSERT INTO `data` (`Date`, `Session`, `IP`, `IpType`, `UA`, `Country`, `Path`, `Method`, `SessionKey`, `CriticalWords`, `Crawler`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-		fc.Date, fc.Session, fc.IP, fc.IpType, fc.UA, fc.Country, fc.Path, fc.Method, fc.SessionKey, string(criticalWordsStr), strconv.FormatBool(fc.Crawler))
+	_, err = p.DBobject.Exec("INSERT INTO `data` (`Datetime`, `Session`, `IP`, `IpType`, `UA`, `Country`, `Path`, `Method`, `SessionKey`, `CriticalWords`, `Crawler`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		fc.DateTime, fc.Session, fc.IP, fc.IpType, fc.UA, fc.Country, fc.Path, fc.Method, fc.SessionKey, string(criticalWordsStr), strconv.FormatBool(fc.Crawler))
 	if err != nil {
 		return err
 	}
