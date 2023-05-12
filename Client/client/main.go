@@ -5,6 +5,7 @@ import (
 	"crawlerDetection/Client/internal"
 	"crawlerDetection/Client/s3Service"
 	"crawlerDetection/Client/utils"
+	"log"
 
 	"database/sql"
 
@@ -33,7 +34,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	logger := utils.GetLogger()
+	logger, err := utils.GetLogger()
+	if err != nil {
+		log.Fatal(err)
+	}
 	dbConn, err := internal.InitDB()
 	if err != nil {
 		logger.Fatal(err)
@@ -45,4 +49,6 @@ func main() {
 	context := initContext(logger, sess, s3Service.GetS3(sess), s3Service.GetDownloader(sess), dbConn)
 	internal.Start(context, config.SessionKey)
 	dbConn.Close()
+	utils.CloseLogger()
+
 }
