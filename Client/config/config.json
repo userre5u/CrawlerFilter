@@ -1,7 +1,7 @@
 {
     "Secrets": {
-        "aws_access_key_id": "AKIAWJVZK3TXNGXGMPYM",
-        "aws_secret_access_key": "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",
+        "aws_access_key_id": "YYYY",
+        "aws_secret_access_key": "XXXXX",
         "region": "eu-west-1",
         "sessionKey": "AAAAAAA"
     }
