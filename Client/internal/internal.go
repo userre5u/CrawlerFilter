@@ -175,7 +175,7 @@ func (p Global_objects) deleteLocalFile(object object_metadata) {
 
 func Start(ctx context.Context, config utils.Config) {
 	globalObject := ctx.Value(Global_objects{}).(Global_objects)
-	for range time.Tick(time.Second * 60) {
+	for range time.Tick(time.Second * 15) {
 		globalObject.Logger.Info("[+] Starting new Extraction...")
 		collectionData, err := globalObject.runList()
 		time.Sleep(time.Second * 2)
@@ -191,8 +191,8 @@ func Start(ctx context.Context, config utils.Config) {
 				globalObject.deleteRemoteFile(object)
 				globalObject.deleteLocalFile(object)
 				globalObject.Logger.Info("[+] Finished extraction, sleeping for 60 seconds...")
-				continue
 			}
+			continue
 		}
 		globalObject.Logger.Info("[-] No files found on S3...")
 	}

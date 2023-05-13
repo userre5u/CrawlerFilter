@@ -6,6 +6,9 @@ import (
 	"crawlerDetection/Client/s3Service"
 	"crawlerDetection/Client/utils"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"database/sql"
 
@@ -30,6 +33,8 @@ func initContext(logger *logrus.Logger, sess *session.Session, s3 *s3.S3, downlo
 }
 
 func main() {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	config, err := utils.LoadConfig()
 	if err != nil {
 		panic(err)
@@ -38,7 +43,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	logger.Infof("CONFIG: %#v\n", config)
 	dbConn, err := internal.InitDB(config)
 	if err != nil {
 		logger.Fatal(err)
@@ -48,7 +52,9 @@ func main() {
 		panic(err)
 	}
 	context := initContext(logger, sess, s3Service.GetS3(sess), s3Service.GetDownloader(sess), dbConn)
-	internal.Start(context, config)
+	go internal.Start(context, config)
+	<-sigs
+	logger.Info("Program is closing resources before exit...")
 	dbConn.Close()
 	utils.CloseLogger()
 
