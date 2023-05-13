@@ -25,5 +25,6 @@ func GetLogger() (*logrus.Logger, error) {
 }
 
 func CloseLogger() {
+	// Close fd before program exit
 	fd.Close()
 }

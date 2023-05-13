@@ -10,10 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-const (
-	bucketname = "bucketbuckettt"
-)
-
 func CreateSession(config *utils.Config) (*session.Session, error) {
 	creds := credentials.NewStaticCredentials(config.Aws_access_key_id, config.Aws_secret_access_key, "")
 	session, err := session.NewSession(&aws.Config{Region: aws.String(config.Region), Credentials: creds})
@@ -25,7 +21,7 @@ func CreateSession(config *utils.Config) (*session.Session, error) {
 }
 
 func ListObjects(s3object *s3.S3) (*s3.ListObjectsOutput, error) {
-	input := s3.ListObjectsInput{Bucket: aws.String(bucketname)}
+	input := s3.ListObjectsInput{Bucket: aws.String(utils.Bucketname)}
 	output, err := s3object.ListObjects(&input)
 	if err != nil {
 		return nil, err
@@ -34,7 +30,7 @@ func ListObjects(s3object *s3.S3) (*s3.ListObjectsOutput, error) {
 }
 
 func DeleteObject(s3object *s3.S3, object string) error {
-	input := s3.DeleteObjectInput{Bucket: aws.String(bucketname), Key: &object}
+	input := s3.DeleteObjectInput{Bucket: aws.String(utils.Bucketname), Key: &object}
 	_, err := s3object.DeleteObject(&input)
 	if err != nil {
 		return err

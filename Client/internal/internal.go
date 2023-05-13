@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crawlerDetection/Client/s3Service"
+	"crawlerDetection/Client/utils"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -78,7 +79,7 @@ func filterOutput(output *s3.ListObjectsOutput) collectionData {
 
 func (p Global_objects) prepareMetadataInsert(object object_metadata) {
 	timeNow := time.Now()
-	fd, err := os.OpenFile("Client/objects_Tests/"+object.name, os.O_RDONLY, 0444)
+	fd, err := os.OpenFile(utils.DownloadObjectsFolder+object.name, os.O_RDONLY, 0444)
 	if err != nil {
 		p.Logger.Errorf("Could not open filename %q for reading: %s", object.name, err)
 	}
@@ -108,13 +109,13 @@ func (p Global_objects) runList() (collectionData, error) {
 }
 
 func (p Global_objects) downloadObjects(object object_metadata) {
-	fd, err := os.Create("Client/objects_Tests/" + object.name)
+	fd, err := os.Create(utils.DownloadObjectsFolder + object.name)
 	if err != nil {
 		p.Logger.Errorf("[-] Coult not create file: %q, %w", object.name, err)
 	}
 	defer fd.Close()
 	n_bytes, err := p.Object_downloader.Download(fd, &s3.GetObjectInput{
-		Bucket: aws.String("bucketbuckettt"),
+		Bucket: aws.String(utils.Bucketname),
 		Key:    aws.String(object.name),
 	})
 	if err != nil {
@@ -133,7 +134,7 @@ func parseLine(content string) (FileContent, error) {
 }
 
 func (p Global_objects) prepareContentInsert(object object_metadata) {
-	fd, err := os.OpenFile("Client/objects_Tests/"+object.name, os.O_RDONLY, 0444)
+	fd, err := os.OpenFile(utils.DownloadObjectsFolder+object.name, os.O_RDONLY, 0444)
 	if err != nil {
 		p.Logger.Error(err)
 	}
@@ -164,7 +165,7 @@ func (p Global_objects) deleteRemoteFile(object object_metadata) {
 
 func (p Global_objects) deleteLocalFile(object object_metadata) {
 	if *object.internal_metadata.deleteFile {
-		if err := os.Remove("Client/objects_Tests/" + object.name); err != nil {
+		if err := os.Remove(utils.DownloadObjectsFolder + object.name); err != nil {
 			p.Logger.Errorf("[-] unable to delete local object: %q - reason: %s", object.name, err)
 		}
 		p.Logger.Infof("[+] Successfully deleted local object: %q", object.name)
