@@ -1,6 +1,0 @@
-time="2023-05-12 15:09:53" level=info msg="[!] Starting new Extraction...\n"
-time="2023-05-12 15:09:55" level=info msg="[-] No files found on S3...\n"
-time="2023-05-12 15:10:13" level=info msg="[!] Starting new Extraction...\n"
-time="2023-05-12 15:10:15" level=info msg="[-] No files found on S3...\n"
-time="2023-05-12 15:10:33" level=info msg="[!] Starting new Extraction...\n"
-time="2023-05-12 15:10:35" level=info msg="[-] No files found on S3...\n"
