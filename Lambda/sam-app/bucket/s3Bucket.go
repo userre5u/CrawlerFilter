@@ -13,13 +13,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type S3Bucket struct{}
-
-const (
-	bucketname = "bucketbuckettt"
-	MaxDataLen = 1024
-)
-
 func CreateSession() (*s3.S3, error) {
 	creds := credentials.NewStaticCredentials(utils.DataConfig.Aws_access_key_id, utils.DataConfig.Aws_secret_access_key, utils.DataConfig.Token)
 	session, err := session.NewSession(&aws.Config{Region: aws.String(utils.DataConfig.Region), Credentials: creds})
@@ -37,17 +30,17 @@ func CreateNewObject() uuid.UUID {
 
 func CreateS3(s3Object *s3.S3) error {
 	params := &s3.CreateBucketInput{
-		Bucket: aws.String(bucketname),
+		Bucket: aws.String(utils.Bucketname),
 	}
 	_, err := s3Object.CreateBucket(params)
 	if err != nil {
-		return fmt.Errorf("failed to create bucket '%s': %w", bucketname, err)
+		return fmt.Errorf("failed to create bucket '%s': %w", utils.Bucketname, err)
 	}
 	return nil
 }
 
 func PutS3(s3Object *s3.S3, data []byte, filename string) error {
-	input := &s3.PutObjectInput{Body: strings.NewReader(string(data)), Key: aws.String(filename), Bucket: aws.String(bucketname)}
+	input := &s3.PutObjectInput{Body: strings.NewReader(string(data)), Key: aws.String(filename), Bucket: aws.String(utils.Bucketname)}
 	_, err := s3Object.PutObject(input)
 	if err != nil {
 		return fmt.Errorf("failed to store data: %w", err)
@@ -57,7 +50,7 @@ func PutS3(s3Object *s3.S3, data []byte, filename string) error {
 }
 
 func BucketExists(s3Object *s3.S3) bool {
-	input := &s3.HeadBucketInput{Bucket: aws.String(bucketname)}
+	input := &s3.HeadBucketInput{Bucket: aws.String(utils.Bucketname)}
 	_, err := s3Object.HeadBucket(input)
 	if err != nil {
 		if _, ok := err.(awserr.Error); ok {

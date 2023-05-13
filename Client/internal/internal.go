@@ -194,7 +194,7 @@ func Start(ctx context.Context, config utils.Config) {
 			}
 			continue
 		}
-		globalObject.Logger.Info("[-] No files found on S3...")
+		globalObject.Logger.Warn("[!] No files found on S3...")
 	}
 
 }
