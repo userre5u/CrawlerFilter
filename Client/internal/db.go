@@ -65,8 +65,8 @@ func (p Global_objects) InsertMetadataToDb(filename, fileHash, pullTime, lastMod
 	return nil
 }
 
-func InitDB() (*sql.DB, error) {
-	db, err := sql.Open(utils.Driver, utils.User+":"+utils.Password+"@"+utils.Proto+"("+utils.Server+":"+utils.Port+")"+"/")
+func InitDB(config utils.Config) (*sql.DB, error) {
+	db, err := sql.Open(utils.Driver, config.Database.User+":"+config.Database.Password+"@"+utils.Proto+"("+utils.Server+":"+config.Database.Port+")"+"/")
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -82,7 +82,7 @@ func InitDB() (*sql.DB, error) {
 	}
 	db.Close()
 	time.Sleep(time.Second * 1)
-	db, err = sql.Open(utils.Driver, utils.User+":"+utils.Password+"@"+utils.Port+"("+utils.Server+":"+utils.Port+")"+"/"+utils.Database+"?multiStatements=true")
+	db, err = sql.Open(utils.Driver, config.Database.User+":"+config.Database.Password+"@"+utils.Proto+"("+utils.Server+":"+config.Database.Port+")"+"/"+utils.Database+"?multiStatements=true")
 	if err != nil {
 		fmt.Println(err)
 		return nil, err

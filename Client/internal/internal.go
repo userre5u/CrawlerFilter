@@ -173,7 +173,7 @@ func (p Global_objects) deleteLocalFile(object object_metadata) {
 
 }
 
-func Start(ctx context.Context, sessionKey string) {
+func Start(ctx context.Context, config utils.Config) {
 	globalObject := ctx.Value(Global_objects{}).(Global_objects)
 	for range time.Tick(time.Second * 60) {
 		globalObject.Logger.Info("[+] Starting new Extraction...")

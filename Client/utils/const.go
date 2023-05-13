@@ -7,12 +7,9 @@ const (
 )
 
 const (
-	User     = "root"
-	Password = "root"
 	Database = "requests"
 	Table    = "request_metadata"
 	Server   = "localhost"
-	Port     = "9876"
 	Proto    = "tcp"
 	Driver   = "mysql"
 )
