@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"crawlerDetection/Client/utils"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -10,21 +11,7 @@ import (
 	"time"
 )
 
-const (
-	user     = "root"
-	password = "root"
-	database = "requests"
-	table    = "request_metadata"
-	server   = "localhost"
-	port     = "9876"
-	proto    = "tcp"
-	driver   = "mysql"
-
-	database_createDB    = "Client/queries/createDB.sql"
-	database_createTable = "Client/queries/createTable.sql"
-)
-
-func ReadQuery(filename string) ([]byte, error) {
+func readQuery(filename string) ([]byte, error) {
 	fd, err := os.OpenFile(filename, os.O_RDONLY, 0666)
 	if err != nil {
 		return nil, err
@@ -36,8 +23,8 @@ func ReadQuery(filename string) ([]byte, error) {
 	return data, nil
 }
 
-func ExecuteQuery(filename string, db *sql.DB) error {
-	data, err := ReadQuery(filename)
+func executeQuery(filename string, db *sql.DB) error {
+	data, err := readQuery(filename)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -79,7 +66,7 @@ func (p Global_objects) InsertMetadataToDb(filename, fileHash, pullTime, lastMod
 }
 
 func InitDB() (*sql.DB, error) {
-	db, err := sql.Open("mysql", user+":"+password+"@"+proto+"("+server+":"+port+")"+"/")
+	db, err := sql.Open(utils.Driver, utils.User+":"+utils.Password+"@"+utils.Proto+"("+utils.Server+":"+utils.Port+")"+"/")
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -89,18 +76,18 @@ func InitDB() (*sql.DB, error) {
 		fmt.Println(err)
 		return nil, err
 	}
-	if err = ExecuteQuery(database_createDB, db); err != nil {
+	if err = executeQuery(utils.Database_createDB, db); err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
 	db.Close()
 	time.Sleep(time.Second * 1)
-	db, err = sql.Open(driver, user+":"+password+"@"+proto+"("+server+":"+port+")"+"/"+database+"?multiStatements=true")
+	db, err = sql.Open(utils.Driver, utils.User+":"+utils.Password+"@"+utils.Port+"("+utils.Server+":"+utils.Port+")"+"/"+utils.Database+"?multiStatements=true")
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
-	if err = ExecuteQuery(database_createTable, db); err != nil {
+	if err = executeQuery(utils.Database_createTable, db); err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
