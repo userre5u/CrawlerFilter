@@ -38,7 +38,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dbConn, err := internal.InitDB()
+	logger.Infof("CONFIG: %#v\n", config)
+	dbConn, err := internal.InitDB(config)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -47,7 +48,7 @@ func main() {
 		panic(err)
 	}
 	context := initContext(logger, sess, s3Service.GetS3(sess), s3Service.GetDownloader(sess), dbConn)
-	internal.Start(context, config.SessionKey)
+	internal.Start(context, config)
 	dbConn.Close()
 	utils.CloseLogger()
 

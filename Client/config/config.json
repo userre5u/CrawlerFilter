@@ -1,8 +1,13 @@
 {
     "Secrets": {
-        "aws_access_key_id": "YYYY",
-        "aws_secret_access_key": "XXXXX",
-        "region": "eu-west-1",
+        "aws_access_key_id": "<key>",
+        "aws_secret_access_key": "<secret>",
+        "region": "<region>",
         "sessionKey": "AAAAAAA"
+    },
+    "DB": {
+        "User"    : "<username>",
+        "Password": "<password>",
+        "Port"    : "<port>"
     }
 }
