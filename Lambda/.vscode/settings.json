@@ -1,8 +1,0 @@
-{
-    "terminal.integrated.cursorStyle": "line",
-    "editor.cursorStyle": "line-thin",
-    "gopls": {
-        "experimentalWorkspaceModule": true,
-    }
-
-}

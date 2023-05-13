@@ -19,12 +19,17 @@ import (
 var data []byte
 var object uuid.UUID
 
+type Global_objects struct {
+	logger   *logrus.Logger
+	s3Object *s3.S3
+}
+
 func displayContent(Crawler bool) (string, int) {
 	if Crawler {
 		return "Forbidden", 403
-	} else {
-		return "Good", 200
 	}
+	return "Good", 200
+
 }
 
 func displayCriticalWords(pCriticalW *[]byte, r *internal.ReqInfo) (err error) {
@@ -107,13 +112,11 @@ func saveData(input string, s3object *s3.S3) error {
 
 }
 
-func Handler(ctx context.Context, e events.LambdaFunctionURLRequest) (events.LambdaFunctionURLResponse, error) {
-	logger, ok := utils.HasLogger(ctx)
-	if !ok {
-		panic("Could not extract logger")
-	}
+func Handler(globalObject Global_objects, e events.LambdaFunctionURLRequest) (events.LambdaFunctionURLResponse, error) {
 
 	reqInfo := internal.ReqInfo{
+		DateTime:      "",
+		Session:       "",
 		IP:            "",
 		Crawler:       false,
 		IpType:        "",
@@ -124,15 +127,10 @@ func Handler(ctx context.Context, e events.LambdaFunctionURLRequest) (events.Lam
 		Method:        "",
 		CriticalWords: map[string]bool{"malware": false, "botnet": false, "Crawler": false, "zombie": false, "zeus": false},
 	}
-	store := runChecker(logger, &reqInfo, e)
-	s3object, ok := ctx.Value(bucket.S3Bucket{}).(*s3.S3)
-	if !ok {
-		panic("Could not extract s3 object")
-	}
-
-	err := saveData(store, s3object)
+	store := runChecker(globalObject.logger, &reqInfo, e)
+	err := saveData(store, globalObject.s3Object)
 	if err != nil {
-		logger.Error(err)
+		globalObject.logger.Error(err)
 		reqInfo.Crawler = true
 	}
 	msg, status_code := displayContent(reqInfo.Crawler)
@@ -153,16 +151,9 @@ func initS3() *s3.S3 {
 	return s3
 }
 
-func initContext(logger *logrus.Logger, s3 *s3.S3) context.Context {
-	// store logger into context
-	sLogging := utils.Logging{}
-	subContext := context.WithValue(context.Background(), sLogging, logger)
-	subContext.Value(sLogging)
-	// store s3 object into context
-	s3object := bucket.S3Bucket{}
-	subContext = context.WithValue(subContext, s3object, s3)
-
-	return subContext
+func initContext(log *logrus.Logger, s3 *s3.S3) context.Context {
+	prime_object := Global_objects{logger: log, s3Object: s3}
+	return context.WithValue(context.Background(), Global_objects{}, prime_object)
 }
 
 func main() {
@@ -171,9 +162,10 @@ func main() {
 		panic(err)
 	}
 	data = make([]byte, 0, 2048)
-	subcontext := initContext(utils.InitLogger(), initS3())
+	ctx := initContext(utils.InitLogger(), initS3())
+	globalObject := ctx.Value(Global_objects{}).(Global_objects)
 	lambda.Start(func(ctx context.Context, e events.LambdaFunctionURLRequest) (events.LambdaFunctionURLResponse, error) {
-		return Handler(subcontext, e)
+		return Handler(globalObject, e)
 	})
 
 }

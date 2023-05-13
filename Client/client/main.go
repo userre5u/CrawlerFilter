@@ -27,8 +27,7 @@ func initContext(logger *logrus.Logger, sess *session.Session, s3 *s3.S3, downlo
 		Object_downloader: downloader,
 		DBobject:          db,
 	}
-	ctx := context.WithValue(context.Background(), internal.Global_objects{}, prime_object)
-	return ctx
+	return context.WithValue(context.Background(), internal.Global_objects{}, prime_object)
 
 }
 
