@@ -76,30 +76,26 @@ func filterOutput(output *s3.ListObjectsOutput) collectionData {
 	return collectMetaData
 }
 
-func (p Global_objects) prepareMetadataInsert(data collectionData) {
+func (p Global_objects) prepareMetadataInsert(object object_metadata) {
 	timeNow := time.Now()
-	for _, object := range data {
-		fd, err := os.OpenFile("Client/objects_Tests/"+object.name, os.O_RDONLY, 0444)
-		if err != nil {
-			p.Logger.Errorf("Could not open filename %q for reading: %s", object.name, err)
-			continue
-		}
-		defer fd.Close()
-		hash := sha256.New()
-		if _, err := io.Copy(hash, fd); err != nil {
-			p.Logger.Errorf("Could not calculate hash of file %q: %s", object.name, err)
-			continue
-		}
-		sum := hex.EncodeToString(hash.Sum(nil))
-		err = p.InsertMetadataToDb(object.name, sum, timeNow.String(), object.lastmodified.String(), object.tag, object.size)
-		if err != nil {
-			p.Logger.Errorf("Could not insert data to DB: %s", err)
-			continue
-		}
-		value := object.internal_metadata
-		*value.deleteFile = true
-		p.Logger.Infof("[+] Successfully prepared object metadata: %q to be inserted to DB, setting delete attribute to 'true'", object.name)
+	fd, err := os.OpenFile("Client/objects_Tests/"+object.name, os.O_RDONLY, 0444)
+	if err != nil {
+		p.Logger.Errorf("Could not open filename %q for reading: %s", object.name, err)
 	}
+	defer fd.Close()
+	hash := sha256.New()
+	if _, err := io.Copy(hash, fd); err != nil {
+		p.Logger.Errorf("Could not calculate hash of file %q: %s", object.name, err)
+	}
+	sum := hex.EncodeToString(hash.Sum(nil))
+	err = p.InsertMetadataToDb(object.name, sum, timeNow.String(), object.lastmodified.String(), object.tag, object.size)
+	if err != nil {
+		p.Logger.Errorf("Could not insert data to DB: %s", err)
+	}
+	value := object.internal_metadata
+	*value.deleteFile = true
+	p.Logger.Infof("[+] Successfully prepared object metadata: %q to be inserted to DB, setting delete attribute to 'true'", object.name)
+
 }
 
 func (p Global_objects) runList() (collectionData, error) {
@@ -111,24 +107,21 @@ func (p Global_objects) runList() (collectionData, error) {
 	return metaData_List, nil
 }
 
-func (p Global_objects) downloadObjects(objectsMetadata collectionData) {
-	for _, object := range objectsMetadata {
-		fd, err := os.Create("Client/objects_Tests/" + object.name)
-		if err != nil {
-			p.Logger.Errorf("[-] Coult not create file: %q, %w", object.name, err)
-			continue
-		}
-		defer fd.Close()
-		n_bytes, err := p.Object_downloader.Download(fd, &s3.GetObjectInput{
-			Bucket: aws.String("bucketbuckettt"),
-			Key:    aws.String(object.name),
-		})
-		if err != nil {
-			p.Logger.Errorf("[-] Could not download file: %q, %w", object.name, err)
-			continue
-		}
-		p.Logger.Infof("[+] File name: %q downloaded - %d bytes", object.name, n_bytes)
+func (p Global_objects) downloadObjects(object object_metadata) {
+	fd, err := os.Create("Client/objects_Tests/" + object.name)
+	if err != nil {
+		p.Logger.Errorf("[-] Coult not create file: %q, %w", object.name, err)
 	}
+	defer fd.Close()
+	n_bytes, err := p.Object_downloader.Download(fd, &s3.GetObjectInput{
+		Bucket: aws.String("bucketbuckettt"),
+		Key:    aws.String(object.name),
+	})
+	if err != nil {
+		p.Logger.Errorf("[-] Could not download file: %q, %w", object.name, err)
+	}
+	p.Logger.Infof("[+] File name: %q downloaded - %d bytes", object.name, n_bytes)
+
 }
 
 func parseLine(content string) (FileContent, error) {
@@ -139,57 +132,50 @@ func parseLine(content string) (FileContent, error) {
 	return fc, nil
 }
 
-func (p Global_objects) prepareContentInsert(objectMetadata collectionData) {
-	for _, object := range objectMetadata {
-		fd, err := os.OpenFile("Client/objects_Tests/"+object.name, os.O_RDONLY, 0444)
+func (p Global_objects) prepareContentInsert(object object_metadata) {
+	fd, err := os.OpenFile("Client/objects_Tests/"+object.name, os.O_RDONLY, 0444)
+	if err != nil {
+		p.Logger.Error(err)
+	}
+	defer fd.Close()
+	scanner := bufio.NewScanner(fd)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		fc, err := parseLine(scanner.Text())
 		if err != nil {
-			p.Logger.Error(err)
-			continue
+			p.Logger.Errorf("Error during data parsing: %s", err)
 		}
-		defer fd.Close()
-		scanner := bufio.NewScanner(fd)
-		scanner.Split(bufio.ScanLines)
-		for scanner.Scan() {
-			fc, err := parseLine(scanner.Text())
-			if err != nil {
-				p.Logger.Errorf("Error during data parsing: %s", err)
-				continue
-			}
-			p.InsertContentToDb(fc)
-		}
-		p.Logger.Infof("[+] Successfully inserted object's content: %q to DB", object.name)
+		p.InsertContentToDb(fc)
 	}
+	p.Logger.Infof("[+] Successfully inserted object's content: %q to DB", object.name)
+
 }
 
-func (p Global_objects) deleteRemoteFile(metadata collectionData) {
-	for _, object := range metadata {
-		if *object.internal_metadata.deleteFile {
-			err := s3Service.DeleteObject(p.Object_s3, object.name)
-			if err != nil {
-				p.Logger.Errorf("[-] Unable to delete object: %q - reason: %s", object.name, err)
-				continue
-			}
-			p.Logger.Infof("[+] Successfully deleted remote object: %q", object.name)
+func (p Global_objects) deleteRemoteFile(object object_metadata) {
+	if *object.internal_metadata.deleteFile {
+		err := s3Service.DeleteObject(p.Object_s3, object.name)
+		if err != nil {
+			p.Logger.Errorf("[-] Unable to delete object: %q - reason: %s", object.name, err)
 		}
+		p.Logger.Infof("[+] Successfully deleted remote object: %q", object.name)
 	}
+
 }
 
-func (p Global_objects) deleteLocalFile(metadata collectionData) {
-	for _, object := range metadata {
-		if *object.internal_metadata.deleteFile {
-			if err := os.Remove("Client/objects_Tests/" + object.name); err != nil {
-				p.Logger.Errorf("[-] unable to delete local object: %q - reason: %s", object.name, err)
-				continue
-			}
-			p.Logger.Infof("[+] Successfully deleted local object: %q", object.name)
+func (p Global_objects) deleteLocalFile(object object_metadata) {
+	if *object.internal_metadata.deleteFile {
+		if err := os.Remove("Client/objects_Tests/" + object.name); err != nil {
+			p.Logger.Errorf("[-] unable to delete local object: %q - reason: %s", object.name, err)
 		}
+		p.Logger.Infof("[+] Successfully deleted local object: %q", object.name)
 	}
+
 }
 
 func Start(ctx context.Context, sessionKey string) {
 	globalObject := ctx.Value(Global_objects{}).(Global_objects)
-	for range time.Tick(time.Second * 20) {
-		globalObject.Logger.Info("[!] Starting new Extraction...")
+	for range time.Tick(time.Second * 60) {
+		globalObject.Logger.Info("[+] Starting new Extraction...")
 		collectionData, err := globalObject.runList()
 		time.Sleep(time.Second * 2)
 		if err != nil {
@@ -197,13 +183,15 @@ func Start(ctx context.Context, sessionKey string) {
 			continue
 		}
 		if len(collectionData) > 0 {
-			globalObject.downloadObjects(collectionData)
-			globalObject.prepareMetadataInsert(collectionData)
-			globalObject.prepareContentInsert(collectionData)
-			globalObject.deleteRemoteFile(collectionData)
-			globalObject.deleteLocalFile(collectionData)
-			globalObject.Logger.Info("[+] Finished extraction, sleeping for 60 seconds...")
-			continue
+			for _, object := range collectionData {
+				globalObject.downloadObjects(object)
+				globalObject.prepareMetadataInsert(object)
+				globalObject.prepareContentInsert(object)
+				globalObject.deleteRemoteFile(object)
+				globalObject.deleteLocalFile(object)
+				globalObject.Logger.Info("[+] Finished extraction, sleeping for 60 seconds...")
+				continue
+			}
 		}
 		globalObject.Logger.Info("[-] No files found on S3...")
 	}
