@@ -9,7 +9,7 @@ const (
 const (
 	Database = "requests"
 	Table    = "request_metadata"
-	Server   = "localhost"
+	Server   = "db"
 	Proto    = "tcp"
 	Driver   = "mysql"
 )
